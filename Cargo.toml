@@ -1,0 +1,27 @@
+[package]
+name = "zerotoprod"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+path = "src/main.rs"
+name = "zerotoprod"
+
+[dependencies]
+axum = "0.6.20"
+tokio = { version = "1.32.0", features = ["macros", "rt-multi-thread"] }
+hyper = "0.14.27"
+serde = { version = "1.0.188", features = ["serde_derive"] }
+serde_urlencoded = "0.7.1"
+
+[dev-dependencies]
+reqwest = "0.11.22"
+
+[target.aarch64-apple-darwin]
+# for faster linking
+rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/zld"]
