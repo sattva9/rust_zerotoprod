@@ -22,10 +22,17 @@ sqlx = { version = "0.7.2", features = ["runtime-tokio-rustls", "macros", "postg
 config = "0.13.3"
 uuid = { version = "1.4.1", features = ["v4"] }
 chrono = "0.4.31"
-parking_lot = "0.12.1"
+tracing = { version = "0.1", features = ["log"] }
+tracing-bunyan-formatter = "0.3.9"
+tracing-subscriber = { version = "0.3.17", features = ["registry", "env-filter"] }
+tracing-log = "0.2.0"
+tower = "0.4.13"
+tower-http = { version = "0.4.4", features = ["trace", "request-id", "util"] }
+secrecy = { version = "0.8.0", features = ["serde"] }
 
 [dev-dependencies]
 reqwest = "0.11.22"
+once_cell = "1.18.0"
 
 [target.aarch64-apple-darwin]
 # for faster linking
