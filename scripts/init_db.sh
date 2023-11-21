@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+SKIP_DOCKER=false
+
 set -x
 set -eo pipefail
 
@@ -17,12 +19,12 @@ fi
 DB_USER=${POSTGRES_USER:=postgres}
 DB_PASSWORD="${POSTGRES_PASSWORD:=password}"
 DB_NAME="${POSTGRES_DB:=newsletter}"
-DB_PORT="${POSTGRES_PORT:=5433}"
+DB_PORT="${POSTGRES_PORT:=5432}"
 DB_HOST="${POSTGRES_HOST:=localhost}"
 
 if ! ${SKIP_DOCKER}
 then
-  docker run -e POSTGRES_USER=${DB_USER} -e POSTGRES_PASSWORD=${DB_PASSWORD} -e POSTGRES_DB=${DB_NAME} -p ${DB_PORT}:5432 -d postgres postgres -N 1000
+  docker run --name postgres --network zerotoprod_network -e POSTGRES_USER=${DB_USER} -e POSTGRES_PASSWORD=${DB_PASSWORD} -e POSTGRES_DB=${DB_NAME} -p ${DB_PORT}:5432 -d postgres postgres -N 1000
 fi
 
 export PGPASSWORD="${DB_PASSWORD}"
@@ -35,6 +37,6 @@ DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAM
 export DATABASE_URL
 sqlx database create
 #sqlx migrate add create_subscriptions_table
-sqlx migrate run
+cd .. && sqlx migrate run
 
 >&2 echo "Postgres has been migrated, ready to go!"

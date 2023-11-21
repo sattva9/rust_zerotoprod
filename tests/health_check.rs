@@ -1,22 +1,22 @@
-use sqlx::{Executor, Connection, PgConnection, PgPool};
-use zerotoprod::configuration::{DatabaseSettings, get_configuration};
-use std::net::TcpListener;
 use once_cell::sync::Lazy;
-use secrecy::ExposeSecret;
+use sqlx::{Connection, Executor, PgConnection, PgPool};
+use std::net::TcpListener;
 use uuid::Uuid;
-use zerotoprod::AppState;
+use zerotoprod::configuration::{get_configuration, DatabaseSettings};
 use zerotoprod::telemetry::{get_tracing_subscriber, init_subscriber};
-
+use zerotoprod::AppState;
 
 static TRACING: Lazy<()> = Lazy::new(|| {
     let default_filter_level = "info".to_string();
     let subscriber_name = "test".to_string();
 
     if std::env::var("TEST_LOG").is_ok() {
-        let subscriber = get_tracing_subscriber(subscriber_name, default_filter_level, std::io::stdout);
+        let subscriber =
+            get_tracing_subscriber(subscriber_name, default_filter_level, std::io::stdout);
         init_subscriber(subscriber);
     } else {
-        let subscriber = get_tracing_subscriber(subscriber_name, default_filter_level, std::io::sink);
+        let subscriber =
+            get_tracing_subscriber(subscriber_name, default_filter_level, std::io::sink);
         init_subscriber(subscriber);
     };
 });
@@ -37,7 +37,9 @@ async fn spawn_app() -> TestApp {
     configuration.database.database_name = Uuid::new_v4().to_string();
     let connection_pool = configure_database(&configuration.database).await;
 
-    let app_state = AppState { pg_connection_pool: connection_pool.clone() };
+    let app_state = AppState {
+        pg_connection_pool: connection_pool.clone(),
+    };
 
     let server = zerotoprod::startup::run(listener, app_state).expect("Failed to bind address");
     tokio::spawn(server);
@@ -50,7 +52,7 @@ async fn spawn_app() -> TestApp {
 
 pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
     // Create database
-    let mut connection = PgConnection::connect(&config.connection_string_without_db().expose_secret())
+    let mut connection = PgConnection::connect_with(&config.without_db())
         .await
         .expect("Failed to connect to Postgres");
     connection
@@ -59,7 +61,7 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
         .expect("Failed to create database.");
 
     // Migrate database
-    let connection_pool = PgPool::connect(&config.connection_string().expose_secret())
+    let connection_pool = PgPool::connect_with(config.without_db())
         .await
         .expect("Failed to connect to Postgres.");
     sqlx::migrate!("./migrations")
@@ -115,7 +117,7 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
     let test_cases = vec![
         ("name=le%20guin", "missing the email"),
         ("email=ursula_le_guin%40gmail.com", "missing the name"),
-        ("", "missing both name and email")
+        ("", "missing both name and email"),
     ];
     let url = format!("http://{}/subscriptions", app.address);
 
@@ -127,6 +129,11 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
             .send()
             .await
             .expect("Failed to execute request");
-        assert_eq!(422, response.status().as_u16(), "The API did not fail with 400 Bad Request when the payload was {}.", error_message);
+        assert_eq!(
+            422,
+            response.status().as_u16(),
+            "The API did not fail with 400 Bad Request when the payload was {}.",
+            error_message
+        );
     }
 }

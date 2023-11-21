@@ -1,18 +1,24 @@
+use crate::routes::{health_check, subscribe};
+use crate::AppState;
+use axum::{
+    routing::{get, post, IntoMakeService},
+    Router,
+};
+use hyper::server::conn::AddrIncoming;
+use hyper::{Body, Request, Response};
 use std::io;
 use std::net::TcpListener;
 use std::time::Duration;
-use hyper::server::conn::AddrIncoming;
-use axum::{Router, routing::{get, post, IntoMakeService}};
-use hyper::{Body, Request, Response};
 use tower::ServiceBuilder;
 use tower_http::request_id::MakeRequestUuid;
 use tower_http::trace::{DefaultOnFailure, DefaultOnRequest, TraceLayer};
 use tower_http::ServiceBuilderExt;
-use tracing::{info, Span, field::Empty};
-use crate::AppState;
-use crate::routes::{health_check, subscribe};
+use tracing::{field::Empty, info, Span};
 
-pub fn run(listener: TcpListener, app_state: AppState) -> Result<hyper::Server<AddrIncoming, IntoMakeService<Router>>, io::Error> {
+pub fn run(
+    listener: TcpListener,
+    app_state: AppState,
+) -> Result<hyper::Server<AddrIncoming, IntoMakeService<Router>>, io::Error> {
     let app = Router::new()
         .route("/health_check", get(health_check))
         .route("/subscriptions", post(subscribe))
@@ -22,8 +28,9 @@ pub fn run(listener: TcpListener, app_state: AppState) -> Result<hyper::Server<A
                 .set_x_request_id(MakeRequestUuid::default())
                 .layer(
                     TraceLayer::new_for_http()
-                        .make_span_with(|request: &Request<Body> | {
-                            let request_id = request.headers()
+                        .make_span_with(|request: &Request<Body>| {
+                            let request_id = request
+                                .headers()
                                 .get("x-request-id")
                                 .expect("Failed to get `x-request-id` from headers")
                                 .to_str()
@@ -46,9 +53,8 @@ pub fn run(listener: TcpListener, app_state: AppState) -> Result<hyper::Server<A
                             info!("Processed request in {latency}ms");
                         })
                         .on_failure(DefaultOnFailure::new()),
-
                 )
-                .propagate_x_request_id()
+                .propagate_x_request_id(),
         );
 
     let server = hyper::Server::from_tcp(listener)

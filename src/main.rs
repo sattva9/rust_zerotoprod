@@ -1,10 +1,9 @@
+use sqlx::postgres::PgPoolOptions;
 use std::net::TcpListener;
-use secrecy::ExposeSecret;
-use sqlx::PgPool;
-use zerotoprod::AppState;
 use zerotoprod::configuration::get_configuration;
 use zerotoprod::startup::run;
 use zerotoprod::telemetry::{get_tracing_subscriber, init_subscriber};
+use zerotoprod::AppState;
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -13,12 +12,17 @@ async fn main() -> Result<(), std::io::Error> {
 
     let configuration = get_configuration().expect("Failed to read configuration.");
 
-    let pg_connection_pool = PgPool::connect(&configuration.database.connection_string().expose_secret())
-        .await
-        .expect("Failed to connect to Postgres.");
+    let pg_connection_pool = PgPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_secs(2))
+        .connect_lazy_with(configuration.database.with_db());
     let app_state = AppState { pg_connection_pool };
 
-    let address = format!("127.0.0.1:{}", configuration.application_port);
+    let address = format!(
+        "{}:{}",
+        configuration.application.host, configuration.application.port
+    );
     let listener = TcpListener::bind(address).expect("Failed to bind port");
-    run(listener, app_state)?.await.map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))
+    run(listener, app_state)?
+        .await
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))
 }
