@@ -6,3 +6,6 @@ database:
   username: "postgres"
   password: "password"
   database_name: "newsletter"
+telemetry:
+  api_key: "" # Add your honeycomb.io api key here
+  endpoint: "https://api.honeycomb.io:443"

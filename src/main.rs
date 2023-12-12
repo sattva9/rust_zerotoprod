@@ -7,10 +7,15 @@ use zerotoprod::AppState;
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
-    let subscriber = get_tracing_subscriber("zerotoprod".into(), "info".into(), std::io::stdout);
-    init_subscriber(subscriber);
-
     let configuration = get_configuration().expect("Failed to read configuration.");
+
+    let subscriber = get_tracing_subscriber(
+        "zerotoprod".into(),
+        "info".into(),
+        std::io::stdout,
+        &configuration.telemetry,
+    );
+    init_subscriber(subscriber);
 
     let pg_connection_pool = PgPoolOptions::new()
         .acquire_timeout(std::time::Duration::from_secs(2))

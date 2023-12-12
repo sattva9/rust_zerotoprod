@@ -9,14 +9,23 @@ use zerotoprod::AppState;
 static TRACING: Lazy<()> = Lazy::new(|| {
     let default_filter_level = "info".to_string();
     let subscriber_name = "test".to_string();
+    let configuration = get_configuration().expect("Failed to read configuration.");
 
     if std::env::var("TEST_LOG").is_ok() {
-        let subscriber =
-            get_tracing_subscriber(subscriber_name, default_filter_level, std::io::stdout);
+        let subscriber = get_tracing_subscriber(
+            subscriber_name,
+            default_filter_level,
+            std::io::stdout,
+            &configuration.telemetry,
+        );
         init_subscriber(subscriber);
     } else {
-        let subscriber =
-            get_tracing_subscriber(subscriber_name, default_filter_level, std::io::sink);
+        let subscriber = get_tracing_subscriber(
+            subscriber_name,
+            default_filter_level,
+            std::io::sink,
+            &configuration.telemetry,
+        );
         init_subscriber(subscriber);
     };
 });

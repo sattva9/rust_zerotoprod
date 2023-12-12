@@ -8,6 +8,7 @@ use sqlx::ConnectOptions;
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
+    pub telemetry: TelemetrySettings,
 }
 
 #[derive(Deserialize)]
@@ -26,6 +27,12 @@ pub struct ApplicationSettings {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub host: String,
+}
+
+#[derive(Deserialize)]
+pub struct TelemetrySettings {
+    pub api_key: String,
+    pub endpoint: String,
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
