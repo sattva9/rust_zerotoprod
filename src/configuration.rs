@@ -31,7 +31,7 @@ pub struct ApplicationSettings {
 
 #[derive(Deserialize)]
 pub struct TelemetrySettings {
-    pub api_key: String,
+    pub api_key: Secret<String>,
     pub endpoint: String,
 }
 

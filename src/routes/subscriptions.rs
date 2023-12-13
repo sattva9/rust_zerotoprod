@@ -1,3 +1,4 @@
+use crate::domain::NewSubscriber;
 use crate::AppState;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -11,8 +12,8 @@ use uuid::Uuid;
 #[allow(dead_code)]
 #[derive(Deserialize)]
 pub struct FormData {
-    email: String,
-    name: String,
+    pub email: String,
+    pub name: String,
 }
 
 #[tracing::instrument(
@@ -24,7 +25,11 @@ pub struct FormData {
     )
 )]
 pub async fn subscribe(state: State<AppState>, form: Form<FormData>) -> Response {
-    match insert_subscriber(&form, &state.pg_connection_pool).await {
+    let new_subscriber = match form.0.try_into() {
+        Ok(s) => s,
+        Err(_) => return (StatusCode::BAD_REQUEST, ()).into_response(),
+    };
+    match insert_subscriber(&new_subscriber, &state.pg_connection_pool).await {
         Ok(_) => (StatusCode::OK, "").into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     }
@@ -32,17 +37,20 @@ pub async fn subscribe(state: State<AppState>, form: Form<FormData>) -> Response
 
 #[tracing::instrument(
     name = "Saving new subscriber details in the database",
-    skip(form, pg_pool)
+    skip(new_subscriber, pg_pool)
 )]
-pub async fn insert_subscriber(form: &FormData, pg_pool: &PgPool) -> Result<(), sqlx::Error> {
+pub async fn insert_subscriber(
+    new_subscriber: &NewSubscriber,
+    pg_pool: &PgPool,
+) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at)
         VALUES ($1, $2, $3, $4)
         "#,
         Uuid::new_v4(),
-        form.email,
-        form.name,
+        new_subscriber.email.as_ref(),
+        new_subscriber.name.as_ref(),
         chrono::Utc::now(),
     )
     .execute(pg_pool)

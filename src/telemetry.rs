@@ -1,4 +1,5 @@
 use opentelemetry_otlp::WithExportConfig;
+use secrecy::ExposeSecret;
 use tonic::metadata::MetadataMap;
 use tracing::{subscriber::set_global_default, Subscriber};
 use tracing_log::LogTracer;
@@ -21,6 +22,7 @@ where
         "x-honeycomb-team",
         settings
             .api_key
+            .expose_secret()
             .parse()
             .expect("Failed to parse honeycomb api key"),
     );
