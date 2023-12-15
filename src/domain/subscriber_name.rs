@@ -1,11 +1,49 @@
+use std::fmt;
+
+use serde::{de::Visitor, Deserialize, Deserializer, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Clone)]
 pub struct SubscriberName(String);
 
 impl AsRef<str> for SubscriberName {
     fn as_ref(&self) -> &str {
         &self.0
+    }
+}
+
+impl<'de> Deserialize<'de> for SubscriberName {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct SubscriberNameVisitor;
+
+        impl<'de> Visitor<'de> for SubscriberNameVisitor {
+            type Value = SubscriberName;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a valid subscriber name string")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                match SubscriberName::parse(value.to_string()) {
+                    Ok(subscriber_name) => Ok(subscriber_name),
+                    Err(err) => Err(E::custom(err)),
+                }
+            }
+        }
+
+        deserializer.deserialize_str(SubscriberNameVisitor)
+    }
+}
+
+impl fmt::Display for SubscriberName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 

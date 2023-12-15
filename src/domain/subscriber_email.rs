@@ -1,11 +1,48 @@
+use serde::{de::Visitor, Deserialize, Deserializer, Serialize};
+use std::fmt;
 use validator::validate_email;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Clone)]
 pub struct SubscriberEmail(String);
 
 impl AsRef<str> for SubscriberEmail {
     fn as_ref(&self) -> &str {
         &self.0
+    }
+}
+
+impl fmt::Display for SubscriberEmail {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for SubscriberEmail {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct SubscriberEmailVisitor;
+
+        impl<'de> Visitor<'de> for SubscriberEmailVisitor {
+            type Value = SubscriberEmail;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a valid subscriber email string")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                match SubscriberEmail::parse(value.to_string()) {
+                    Ok(subscriber_name) => Ok(subscriber_name),
+                    Err(err) => Err(E::custom(err)),
+                }
+            }
+        }
+
+        deserializer.deserialize_str(SubscriberEmailVisitor)
     }
 }
 

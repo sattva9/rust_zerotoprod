@@ -4,14 +4,17 @@ use serde_aux::field_attributes::deserialize_number_from_string;
 use sqlx::postgres::{PgConnectOptions, PgSslMode};
 use sqlx::ConnectOptions;
 
-#[derive(Deserialize)]
+use crate::domain::{ApplicationBaseUrl, Subscriber};
+
+#[derive(Deserialize, Clone)]
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
     pub telemetry: TelemetrySettings,
+    pub email: EmailSettings,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct DatabaseSettings {
     pub username: String,
     pub password: Secret<String>,
@@ -22,17 +25,27 @@ pub struct DatabaseSettings {
     pub require_ssl: bool,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct ApplicationSettings {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub host: String,
+    pub base_url: ApplicationBaseUrl,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct TelemetrySettings {
+    pub enabled: bool,
     pub api_key: Secret<String>,
     pub endpoint: String,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct EmailSettings {
+    pub endpoint: String,
+    pub api_key: Secret<String>,
+    pub sender: Subscriber,
+    pub timeout_millis: u64,
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
