@@ -78,7 +78,7 @@ async fn subscribe_returns_a_200_when_fields_are_present_but_empty() {
         let response = app.post_subscriptions(body.into()).await;
 
         assert_eq!(
-            422,
+            400,
             response.status().as_u16(),
             "The API did not return a 400 OK when the payload was {}.",
             description
