@@ -79,9 +79,19 @@ impl EmailClient {
             .json(&body)
             .send()
             .await
-            .map_err(|e| anyhow::anyhow!("Failed to send a confirmation email. {e}"))?
+            .map_err(|e| {
+                anyhow::anyhow!(
+                    "Failed to send a confirmation email for {}. {e}",
+                    recipent.email
+                )
+            })?
             .error_for_status()
-            .map_err(|e| anyhow::anyhow!("Error while sending a confirmation email. {e}"))?;
+            .map_err(|e| {
+                anyhow::anyhow!(
+                    "Error while sending a confirmation email for {}. {e}",
+                    recipent.email
+                )
+            })?;
         Ok(())
     }
 }

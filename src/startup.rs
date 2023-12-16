@@ -1,6 +1,6 @@
 use crate::configuration::{DatabaseSettings, Settings};
 use crate::email_client::EmailClient;
-use crate::routes::{confirm, health_check, subscribe};
+use crate::routes::{confirm, health_check, publish_newsletter, subscribe};
 use crate::AppState;
 use axum::{
     routing::{get, post, IntoMakeService},
@@ -67,6 +67,7 @@ pub fn run(listener: TcpListener, app_state: crate::AppState) -> Result<Server, 
         .route("/health_check", get(health_check))
         .route("/subscriptions", post(subscribe))
         .route("/subscriptions/confirm", get(confirm))
+        .route("/newsletters", post(publish_newsletter))
         .with_state(app_state)
         .layer(
             ServiceBuilder::new()
