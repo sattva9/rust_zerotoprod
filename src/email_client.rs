@@ -61,11 +61,11 @@ impl EmailClient {
         recipent: &Subscriber,
         subject: &str,
         html_content: &str,
-    ) -> Result<(), String> {
+    ) -> Result<(), anyhow::Error> {
         let url = self
             .url
             .join("/v3/smtp/email")
-            .map_err(|e| format!("Failed to construct url: {e}"))?;
+            .map_err(|e| anyhow::anyhow!(e))?;
         let body = SendEmailRequest {
             sender: &self.sender,
             to: vec![recipent],
@@ -79,9 +79,9 @@ impl EmailClient {
             .json(&body)
             .send()
             .await
-            .map_err(|e| e.to_string())?
+            .map_err(|e| anyhow::anyhow!("Failed to send a confirmation email. {e}"))?
             .error_for_status()
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| anyhow::anyhow!("Error while sending a confirmation email. {e}"))?;
         Ok(())
     }
 }

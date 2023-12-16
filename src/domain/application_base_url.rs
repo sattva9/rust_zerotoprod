@@ -48,7 +48,7 @@ impl ApplicationBaseUrl {
         Ok(Self(url))
     }
 
-    pub fn join(&self, path: &str) -> Result<Url, String> {
-        self.0.join(path).map_err(|e| e.to_string())
+    pub fn join(&self, path: &str) -> Result<Url, anyhow::Error> {
+        self.0.join(path).map_err(|e| anyhow::anyhow!(e))
     }
 }
