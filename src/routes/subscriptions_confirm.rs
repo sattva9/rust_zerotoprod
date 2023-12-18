@@ -31,11 +31,11 @@ impl std::fmt::Debug for ConfirmationError {
 
 impl IntoResponse for ConfirmationError {
     fn into_response(self) -> Response {
-        match self {
-            Self::UnexpectedError(e) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        match &self {
+            Self::UnexpectedError(_) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response()
             }
-            Self::UnknownToken => (StatusCode::UNAUTHORIZED, "").into_response(),
+            Self::UnknownToken => (StatusCode::UNAUTHORIZED, self.to_string()).into_response(),
         }
     }
 }

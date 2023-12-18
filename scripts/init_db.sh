@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-SKIP_DOCKER=false
+SKIP_DOCKER=true
 
 set -x
 set -eo pipefail

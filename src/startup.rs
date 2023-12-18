@@ -1,7 +1,9 @@
 use crate::configuration::{DatabaseSettings, Settings};
 use crate::email_client::EmailClient;
-use crate::routes::{confirm, health_check, publish_newsletter, subscribe};
-use crate::AppState;
+use crate::routes::{
+    confirm, health_check, home, login, login_form, publish_newsletter, subscribe,
+};
+use crate::{AppState, HmacSecret};
 use axum::{
     routing::{get, post, IntoMakeService},
     Router,
@@ -38,6 +40,7 @@ impl Application {
             pg_connection_pool,
             email_client,
             application_base_url: Arc::new(configuration.application.base_url),
+            hmac_secret: Arc::new(HmacSecret(configuration.application.hmac_secret)),
         };
 
         let address = format!(
@@ -68,6 +71,8 @@ pub fn run(listener: TcpListener, app_state: crate::AppState) -> Result<Server, 
         .route("/subscriptions", post(subscribe))
         .route("/subscriptions/confirm", get(confirm))
         .route("/newsletters", post(publish_newsletter))
+        .route("/", get(home))
+        .route("/login", get(login_form).post(login))
         .with_state(app_state)
         .layer(
             ServiceBuilder::new()

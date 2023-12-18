@@ -44,10 +44,10 @@ impl std::fmt::Debug for SubscribeError {
 
 impl IntoResponse for SubscribeError {
     fn into_response(self) -> Response {
-        match self {
-            Self::ValidationError(e) => (StatusCode::BAD_REQUEST, e).into_response(),
-            Self::UnexpectedError(e) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        match &self {
+            Self::ValidationError(_) => (StatusCode::BAD_REQUEST, self.to_string()).into_response(),
+            Self::UnexpectedError(_) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response()
             }
         }
     }

@@ -31,6 +31,7 @@ pub struct ApplicationSettings {
     pub port: u16,
     pub host: String,
     pub base_url: ApplicationBaseUrl,
+    pub hmac_secret: Secret<String>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -47,6 +48,9 @@ pub struct EmailSettings {
     pub sender: Subscriber,
     pub timeout_millis: u64,
 }
+
+#[derive(Clone)]
+pub struct HmacSecret(pub Secret<String>);
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
     let base_path = std::env::current_dir().expect("Failed to determine current directory");
