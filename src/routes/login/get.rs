@@ -1,49 +1,14 @@
-use axum::{
-    extract::{Query, State},
-    response::{Html, IntoResponse, Response},
-};
-use hmac::{Hmac, Mac};
-use secrecy::ExposeSecret;
-use serde::Deserialize;
+use axum::response::{Html, IntoResponse, Response};
+use axum_extra::extract::CookieJar;
 
-use crate::{AppState, HmacSecret};
-
-#[derive(Deserialize)]
-pub struct QueryParams {
-    error: String,
-    tag: String,
-}
-
-impl QueryParams {
-    fn verify(self, secret: &HmacSecret) -> anyhow::Result<String> {
-        let tag = hex::decode(self.tag)?;
-        let query_string = format!("error={}", urlencoding::Encoded::new(&self.error));
-        let mut mac =
-            Hmac::<sha3::Sha3_256>::new_from_slice(secret.0.expose_secret().as_bytes()).unwrap();
-        mac.update(query_string.as_bytes());
-        mac.verify_slice(&tag)?;
-
-        Ok(self.error)
-    }
-}
-
-pub async fn login_form(state: State<AppState>, query: Option<Query<QueryParams>>) -> Response {
-    let error_html = match query {
+pub async fn login_form(cookie_jar: CookieJar) -> Response {
+    let error_html = match cookie_jar.get("_flash") {
         None => "".into(),
-        Some(query) => match query.0.verify(&state.hmac_secret) {
-            Ok(error) => {
-                format!("<p><i>{}</i></p>", html_escape::encode_text(&error))
-            }
-            Err(e) => {
-                tracing::warn!(
-                error.message = %e,
-                error.cause_chain = ?e,
-                "Failed to verify query parameters using the HMAC tag"
-                );
-                "".into()
-            }
-        },
+        Some(cookie) => {
+            format!("<p><i>{}</i></p>", cookie.value())
+        }
     };
+
     let body = format!(
         r#"<!doctype html>
     <html lang="en">

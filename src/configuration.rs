@@ -49,9 +49,6 @@ pub struct EmailSettings {
     pub timeout_millis: u64,
 }
 
-#[derive(Clone)]
-pub struct HmacSecret(pub Secret<String>);
-
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
     let base_path = std::env::current_dir().expect("Failed to determine current directory");
     let configuration_directory = base_path.join("configuration");

@@ -3,8 +3,9 @@ use axum::{
     response::{IntoResponse, Redirect, Response},
     Form,
 };
-use hmac::{Hmac, Mac};
-use secrecy::{ExposeSecret, Secret};
+use axum_extra::extract::cookie::{Cookie, CookieJar};
+use cookie::time::Duration;
+use secrecy::Secret;
 use serde::Deserialize;
 
 use crate::{
@@ -23,7 +24,11 @@ pub struct FormData {
     skip(state, form),
     fields(username=tracing::field::Empty, user_id=tracing::field::Empty)
 )]
-pub async fn login(state: State<AppState>, form: Form<FormData>) -> Response {
+pub async fn login(
+    cookie_jar: CookieJar,
+    state: State<AppState>,
+    form: Form<FormData>,
+) -> Response {
     let credentials = Credentials {
         username: form.0.username,
         password: form.0.password,
@@ -33,7 +38,7 @@ pub async fn login(state: State<AppState>, form: Form<FormData>) -> Response {
     match validate_credentials(&state.pg_connection_pool, credentials).await {
         Ok(user_id) => {
             tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
-            Redirect::to("/").into_response()
+            (cookie_jar, Redirect::to("/admin/dashboard")).into_response()
         }
         Err(e) => {
             let e = match e {
@@ -41,17 +46,10 @@ pub async fn login(state: State<AppState>, form: Form<FormData>) -> Response {
                 AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
             };
 
-            let query_string = format!("error={}", urlencoding::Encoded::new(e.to_string()));
-            let hmac_tag = {
-                let mut mac = Hmac::<sha3::Sha3_256>::new_from_slice(
-                    state.hmac_secret.0.expose_secret().as_bytes(),
-                )
-                .unwrap();
-                mac.update(query_string.as_bytes());
-                mac.finalize().into_bytes()
-            };
-            let redirect_url = format!("/login?{}&tag={:x}", query_string, hmac_tag);
-            Redirect::to(&redirect_url).into_response()
+            let mut cookie = Cookie::new("_flash", e.to_string());
+            cookie.set_max_age(Duration::seconds(1));
+
+            (cookie_jar.add(cookie), Redirect::to("/login")).into_response()
         }
     }
 }
