@@ -24,8 +24,8 @@ pub struct SendEmailRequest<'a> {
 }
 
 impl EmailClient {
-    pub fn new(config: EmailSettings) -> Result<Self, String> {
-        let url = Url::parse(&config.endpoint).map_err(|e| e.to_string())?;
+    pub fn new(config: EmailSettings) -> anyhow::Result<Self> {
+        let url = Url::parse(&config.endpoint).map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         let mut headers = header::HeaderMap::new();
         headers.insert(
@@ -34,20 +34,20 @@ impl EmailClient {
                 .api_key
                 .expose_secret()
                 .parse()
-                .map_err(|e| format!("Failed tp parse api_key: {e}"))?,
+                .map_err(|e| anyhow::anyhow!("Failed tp parse api_key: {e}"))?,
         );
         headers.insert(
             header::ACCEPT,
             "application/json"
                 .parse()
-                .map_err(|e| format!("Failed tp parse api_key: {e}"))?,
+                .map_err(|e| anyhow::anyhow!("Failed tp parse api_key: {e}"))?,
         );
 
         let http_client = ClientBuilder::new()
             .default_headers(headers)
             .timeout(Duration::from_millis(config.timeout_millis))
             .build()
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         Ok(Self {
             http_client,

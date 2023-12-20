@@ -111,6 +111,7 @@ impl TestApp {
             .unwrap()
     }
 
+    #[allow(dead_code)]
     pub async fn get_admin_dashboard(&self) -> String {
         self.api_client
             .get(&format!("{}/admin/dashboard", &self.address))
@@ -137,8 +138,9 @@ pub async fn spawn_app() -> TestApp {
     };
     configure_database(&configuration.database).await;
 
-    let application =
-        Application::build(configuration.clone()).expect("Failed to build application.");
+    let application = Application::build(configuration.clone())
+        .await
+        .expect("Failed to build application.");
     let application_port = application.port();
     let address = format!("http://localhost:{}", application_port);
     tokio::spawn(application.run_until_stopped());

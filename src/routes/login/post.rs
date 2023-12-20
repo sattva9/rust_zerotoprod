@@ -25,8 +25,8 @@ pub struct FormData {
     fields(username=tracing::field::Empty, user_id=tracing::field::Empty)
 )]
 pub async fn login(
-    cookie_jar: CookieJar,
     state: State<AppState>,
+    cookie_jar: CookieJar,
     form: Form<FormData>,
 ) -> Response {
     let credentials = Credentials {
