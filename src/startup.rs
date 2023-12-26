@@ -1,23 +1,41 @@
-use crate::configuration::{DatabaseSettings, Settings};
+use crate::authentication::reject_anonymous_users;
+use crate::configuration::{DatabaseSettings, RedisSettings, Settings};
 use crate::email_client::EmailClient;
 use crate::routes::{
-    confirm, health_check, home, login, login_form, publish_newsletter, subscribe,
+    admin_dashboard, change_password, change_password_form, confirm, health_check, home, log_out,
+    login, login_form, publish_newsletter, publish_newsletter_form, subscribe,
 };
 use crate::{AppState, HmacSecret};
 
+use axum::middleware;
 use axum::routing::post;
+use secrecy::ExposeSecret;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tower_http::request_id::MakeRequestUuid;
 use tower_http::ServiceBuilderExt;
+use tower_sessions::fred::clients::RedisClient;
+use tower_sessions::fred::interfaces::ClientLike;
+use tower_sessions::fred::types::RedisConfig;
+use tower_sessions::RedisStore;
 
-use axum::{body::Body, http::Request, response::Response, routing::get, serve::Serve, Router};
+use axum::{
+    body::Body,
+    http::{Request, StatusCode},
+    response::Response,
+    routing::get,
+    serve::Serve,
+    Router,
+};
 use std::time::Duration;
 use tokio::net::TcpListener;
-use tower::ServiceBuilder;
+use tower::{BoxError, ServiceBuilder};
 use tower_http::trace::{DefaultOnFailure, DefaultOnRequest, TraceLayer};
 use tracing::{field::Empty, info, Span};
+
+use axum::error_handling::HandleErrorLayer;
+use tower_sessions::{Expiry, SessionManagerLayer};
 
 type Server = Serve<Router, Router>;
 
@@ -30,11 +48,20 @@ impl Application {
     pub async fn build(configuration: Settings) -> anyhow::Result<Self> {
         let pg_connection_pool = get_connection_pool(&configuration.database);
         let email_client = Arc::new(EmailClient::new(configuration.email)?);
+        let flash_key = axum_flash::Key::from(
+            configuration
+                .application
+                .hmac_secret
+                .expose_secret()
+                .as_bytes(),
+        );
+        let redis_client = redis_client(configuration.redis).await?;
         let app_state = AppState {
             pg_connection_pool,
             email_client,
             application_base_url: Arc::new(configuration.application.base_url),
             hmac_secret: Arc::new(HmacSecret(configuration.application.hmac_secret)),
+            flash_config: axum_flash::Config::new(flash_key),
         };
 
         let address = format!(
@@ -45,7 +72,7 @@ impl Application {
             .await
             .expect("Failed to bind port");
         let port = listener.local_addr()?.port();
-        let server = run(listener, app_state)?;
+        let server = run(listener, app_state, redis_client)?;
 
         Ok(Self { port, server })
     }
@@ -59,7 +86,12 @@ impl Application {
     }
 }
 
-pub fn run(listener: TcpListener, app_state: crate::AppState) -> anyhow::Result<Server> {
+pub fn run(
+    listener: TcpListener,
+    app_state: crate::AppState,
+    redis_client: RedisClient,
+) -> anyhow::Result<Server> {
+    let session_store = RedisStore::new(redis_client);
     let service = ServiceBuilder::new()
         .set_x_request_id(MakeRequestUuid)
         .layer(
@@ -90,15 +122,36 @@ pub fn run(listener: TcpListener, app_state: crate::AppState) -> anyhow::Result<
                 })
                 .on_failure(DefaultOnFailure::new()),
         )
+        .layer(HandleErrorLayer::new(|_: BoxError| async {
+            StatusCode::BAD_REQUEST
+        }))
+        .layer(
+            SessionManagerLayer::new(session_store)
+                .with_secure(true)
+                .with_expiry(Expiry::OnInactivity(time::Duration::seconds(900))),
+        )
         .propagate_x_request_id();
+
+    let admin_routes = Router::new()
+        .route("/dashboard", get(admin_dashboard))
+        .route("/password", get(change_password_form).post(change_password))
+        .route("/logout", post(log_out))
+        .route(
+            "/newsletters",
+            get(publish_newsletter_form).post(publish_newsletter),
+        )
+        .layer(middleware::from_fn_with_state(
+            app_state.clone(),
+            reject_anonymous_users,
+        ));
 
     let app = Router::new()
         .route("/health_check", get(health_check))
         .route("/subscriptions", post(subscribe))
         .route("/subscriptions/confirm", get(confirm))
-        .route("/newsletters", post(publish_newsletter))
         .route("/", get(home))
         .route("/login", get(login_form).post(login))
+        .nest("/admin", admin_routes)
         .with_state(app_state)
         .layer(service);
 
@@ -109,4 +162,17 @@ pub fn get_connection_pool(configuration: &DatabaseSettings) -> PgPool {
     PgPoolOptions::new()
         .acquire_timeout(std::time::Duration::from_secs(2))
         .connect_lazy_with(configuration.with_db())
+}
+
+async fn redis_client(config: RedisSettings) -> anyhow::Result<RedisClient> {
+    let redis_config =
+        RedisConfig::from_url(config.uri.expose_secret()).map_err(|e| anyhow::anyhow!(e))?;
+    let redis_client = RedisClient::new(redis_config, None, None, None);
+
+    redis_client.connect();
+    redis_client
+        .wait_for_connect()
+        .await
+        .map_err(|e| anyhow::anyhow!(e))?;
+    Ok(redis_client)
 }

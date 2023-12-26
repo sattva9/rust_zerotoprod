@@ -61,7 +61,7 @@ impl EmailClient {
         recipent: &Subscriber,
         subject: &str,
         html_content: &str,
-    ) -> Result<(), anyhow::Error> {
+    ) -> anyhow::Result<()> {
         let url = self
             .url
             .join("/v3/smtp/email")

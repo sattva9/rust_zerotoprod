@@ -1,5 +1,6 @@
 use opentelemetry_otlp::WithExportConfig;
 use secrecy::ExposeSecret;
+use tokio::task::JoinHandle;
 use tonic::metadata::MetadataMap;
 use tracing::subscriber::set_global_default;
 use tracing_log::LogTracer;
@@ -65,4 +66,13 @@ pub fn telemetry_layer(settings: &TelemetrySettings) -> Option<Tracer> {
         .install_batch(opentelemetry_sdk::runtime::Tokio)
         .expect("failed to get opentelemetry tracer");
     Some(open_telemetry_tracer)
+}
+
+pub fn spawn_blocking_with_tracing<F, R>(f: F) -> JoinHandle<R>
+where
+    F: FnOnce() -> R + Send + 'static,
+    R: Send + 'static,
+{
+    let current_span = tracing::Span::current();
+    tokio::task::spawn_blocking(move || current_span.in_scope(f))
 }

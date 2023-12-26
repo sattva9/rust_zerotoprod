@@ -12,6 +12,7 @@ pub struct Settings {
     pub application: ApplicationSettings,
     pub telemetry: TelemetrySettings,
     pub email: EmailSettings,
+    pub redis: RedisSettings,
 }
 
 #[derive(Deserialize, Clone)]
@@ -47,6 +48,11 @@ pub struct EmailSettings {
     pub api_key: Secret<String>,
     pub sender: Subscriber,
     pub timeout_millis: u64,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct RedisSettings {
+    pub uri: Secret<String>,
 }
 
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {

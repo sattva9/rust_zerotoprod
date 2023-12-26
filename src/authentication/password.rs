@@ -3,10 +3,9 @@ use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, Salt
 use argon2::{Algorithm, Argon2, Params, Version};
 use secrecy::ExposeSecret;
 use secrecy::Secret;
-use sha3::Digest;
 use sqlx::PgPool;
 
-use crate::routes::spawn_blocking_with_tracing;
+use crate::telemetry::spawn_blocking_with_tracing;
 
 #[derive(thiserror::Error, Debug)]
 pub enum AuthError {
@@ -86,25 +85,38 @@ pub async fn get_stored_credentials(
     Ok(row)
 }
 
-#[allow(unused)]
-fn sha_password(password: Secret<String>) -> String {
-    let mut hasher = sha3::Sha3_256::new();
-    hasher.update(password.expose_secret().as_bytes());
-    format!("{:x}", hasher.finalize())
+#[tracing::instrument(name = "Change password", skip(pg_pool, password))]
+pub async fn change_password(
+    pg_pool: &PgPool,
+    user_id: uuid::Uuid,
+    password: Secret<String>,
+) -> Result<(), anyhow::Error> {
+    let password_hash = spawn_blocking_with_tracing(move || compute_password_hash(password))
+        .await?
+        .context("Failed to hash password")?;
+    sqlx::query!(
+        r#"
+        UPDATE users
+        SET password_hash = $1
+        WHERE user_id = $2
+        "#,
+        password_hash.expose_secret(),
+        user_id
+    )
+    .execute(pg_pool)
+    .await
+    .context("Failed to change user's password in the database.")?;
+    Ok(())
 }
 
-#[allow(unused)]
-fn argon_password(password: Secret<String>, salt: &str) -> anyhow::Result<String> {
-    let mut hasher = Argon2::new(
+fn compute_password_hash(password: Secret<String>) -> anyhow::Result<Secret<String>> {
+    let salt = SaltString::generate(&mut rand::thread_rng());
+    let password_hash = Argon2::new(
         Algorithm::Argon2id,
         Version::V0x13,
-        Params::new(15000, 2, 1, None).context("Failed to build Argon2 parameters")?,
-    );
-
-    let salt = SaltString::from_b64(salt).context("Failed to convert to salt")?;
-    let password = hasher
-        .hash_password(password.expose_secret().as_bytes(), &salt)
-        .context("Failed to hash password")?
-        .to_string();
-    Ok(password)
+        Params::new(15000, 2, 1, None).unwrap(),
+    )
+    .hash_password(password.expose_secret().as_bytes(), &salt)?
+    .to_string();
+    Ok(Secret::new(password_hash))
 }

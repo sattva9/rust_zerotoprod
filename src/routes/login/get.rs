@@ -1,13 +1,10 @@
 use axum::response::{Html, IntoResponse, Response};
-use axum_extra::extract::CookieJar;
+use axum_flash::IncomingFlashes;
 
-pub async fn login_form(cookie_jar: CookieJar) -> Response {
-    let error_html = match cookie_jar.get("_flash") {
-        None => "".into(),
-        Some(cookie) => {
-            format!("<p><i>{}</i></p>", cookie.value())
-        }
-    };
+use crate::utils::read_flash_messages;
+
+pub async fn login_form(flash_messages: IncomingFlashes) -> Response {
+    let msg_html = read_flash_messages(&flash_messages);
 
     let body = format!(
         r#"<!doctype html>
@@ -17,7 +14,7 @@ pub async fn login_form(cookie_jar: CookieJar) -> Response {
             <title>Login</title>
         </head>
         <body>
-            {error_html}
+            {msg_html}
             <form action="/login" method="post">
                 <label>
                     Username
@@ -41,5 +38,5 @@ pub async fn login_form(cookie_jar: CookieJar) -> Response {
     </html>
 "#
     );
-    Html(body).into_response()
+    (flash_messages, Html(body)).into_response()
 }
