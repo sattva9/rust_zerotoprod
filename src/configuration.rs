@@ -1,3 +1,4 @@
+use crate::email_client::EmailClient;
 use secrecy::{ExposeSecret, Secret};
 use serde::Deserialize;
 use serde_aux::field_attributes::deserialize_number_from_string;
@@ -129,5 +130,11 @@ impl DatabaseSettings {
             .username(&self.username)
             .password(self.password.expose_secret())
             .ssl_mode(ssl_mode)
+    }
+}
+
+impl EmailSettings {
+    pub fn client(self) -> anyhow::Result<EmailClient> {
+        EmailClient::new(self)
     }
 }

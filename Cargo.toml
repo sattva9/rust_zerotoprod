@@ -58,10 +58,11 @@ tokio = { version = "1.32.0", features = ["rt", "macros"] }
 serde_json = "1.0.108"
 nom = "6.1.2"
 linkify = "0.10.0"
+serde_urlencoded = "0.7.1"
 
 [target.aarch64-apple-darwin]
 # for faster linking
-rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/zld"]
+# rustflags = ["-C", "link-arg=-fuse-ld=/usr/local/bin/zld"]
 
 [profile.release]
 strip = true

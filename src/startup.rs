@@ -1,6 +1,5 @@
 use crate::authentication::reject_anonymous_users;
 use crate::configuration::{DatabaseSettings, RedisSettings, Settings};
-use crate::email_client::EmailClient;
 use crate::routes::{
     admin_dashboard, change_password, change_password_form, confirm, health_check, home, log_out,
     login, login_form, publish_newsletter, publish_newsletter_form, subscribe,
@@ -47,7 +46,7 @@ pub struct Application {
 impl Application {
     pub async fn build(configuration: Settings) -> anyhow::Result<Self> {
         let pg_connection_pool = get_connection_pool(&configuration.database);
-        let email_client = Arc::new(EmailClient::new(configuration.email)?);
+        let email_client = Arc::new(configuration.email.client()?);
         let flash_key = axum_flash::Key::from(
             configuration
                 .application
