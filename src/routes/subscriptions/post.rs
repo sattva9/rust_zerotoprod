@@ -3,8 +3,9 @@ use crate::AppState;
 use anyhow::Context;
 use axum::extract::State;
 use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
+use axum::response::{IntoResponse, Redirect, Response};
 use axum::Form;
+use axum_flash::Flash;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde::Deserialize;
@@ -32,7 +33,8 @@ impl TryFrom<FormData> for Subscriber {
 pub enum SubscribeError {
     #[error("{0}")]
     ValidationError(String),
-    #[error(transparent)]
+    // #[error(transparent)]
+    #[error("Something went wrong")]
     UnexpectedError(#[from] anyhow::Error),
 }
 
@@ -63,6 +65,7 @@ impl IntoResponse for SubscribeError {
 )]
 pub async fn subscribe(
     state: State<AppState>,
+    flash: Flash,
     form: Form<FormData>,
 ) -> Result<Response, SubscribeError> {
     let subscriber = form.0.try_into().map_err(SubscribeError::ValidationError)?;
@@ -74,7 +77,8 @@ pub async fn subscribe(
 
     let subscriber_id = insert_subscriber(&mut transaction, &subscriber).await?;
     if subscriber_id.is_none() {
-        return Ok((StatusCode::OK, "").into_response());
+        let flash = flash.info("Already subscribed!");
+        return Ok((flash, Redirect::to("/subscriptions")).into_response());
     }
     let subscriber_id = subscriber_id.unwrap();
 
@@ -88,7 +92,8 @@ pub async fn subscribe(
 
     send_confirmation_email(&state, &subscriber, &subscription_token).await?;
 
-    Ok((StatusCode::OK, "").into_response())
+    let flash = flash.info("Sent verification mail. Please confirm to complete subscription.");
+    Ok((flash, Redirect::to("/subscriptions")).into_response())
 }
 
 #[tracing::instrument(

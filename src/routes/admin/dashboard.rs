@@ -1,8 +1,9 @@
 use anyhow::Context;
+use askama_axum::Template;
 use axum::{
     extract::State,
     http::StatusCode,
-    response::{Html, IntoResponse, Response},
+    response::{IntoResponse, Response},
     Extension,
 };
 use axum_flash::Flash;
@@ -10,6 +11,12 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::{authentication::UserId, utils::e500, AppState};
+
+#[derive(Template)]
+#[template(path = "admin/dashboard.html")]
+struct AdminDashboard {
+    username: String,
+}
 
 pub async fn admin_dashboard(
     state: State<AppState>,
@@ -21,29 +28,7 @@ pub async fn admin_dashboard(
         .await
         .map_err(e500)?;
 
-    let body = format!(
-        r#"<!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta http-equiv="content-type" content="text/html; charset=utf-8">
-        <title>Admin dashboard</title>
-    </head>
-    <body>
-        <p>Welcome {username}!</p>
-        <p>Available actions:</p>
-        <ol>
-            <li><a href="/admin/password">Change password</a></li>
-            <li><a href="/admin/newsletters">Send a newsletter</a></li>
-            <li>
-                <form name="logoutForm" action="/admin/logout" method="post">
-                    <input type="submit" value="Logout">
-                </form>
-            </li>
-        </ol>
-    </body>
-    </html>"#
-    );
-    Ok((flash, Html(body)).into_response())
+    Ok((flash, AdminDashboard { username }).into_response())
 }
 
 #[tracing::instrument(name = "Get username", skip(pg_pool))]

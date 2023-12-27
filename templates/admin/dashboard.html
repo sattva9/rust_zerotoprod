@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Dashboard</title>
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+        />
+    </head>
+
+    <body>
+        <div class="container mt-5">
+            <h1 style="color: purple">Welcome {{ username }}!</h1>
+            <br />
+            <h3 class="mb-4">Available Actions</h3>
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                <div class="col">
+                    <a class="card btn btn-success" href="/admin/password">
+                        <div class="card-body">
+                            <h5 class="card-title">Change Password</h5>
+                        </div>
+                    </a>
+                </div>
+                <div class="col">
+                    <a class="card btn btn-primary" href="/admin/newsletters">
+                        <div class="card-body">
+                            <h5 class="card-title">Send a Newsletter</h5>
+                        </div>
+                    </a>
+                </div>
+                <div class="col">
+                    <a class="card btn btn-warning" href="/admin/issues">
+                        <div class="card-body">
+                            <h5 class="card-title">View Issues</h5>
+                        </div>
+                    </a>
+                </div>
+                <div class="col">
+                    <a class="card btn btn-info" href="/admin/subscribers">
+                        <div class="card-body">
+                            <h5 class="card-title">View Subscribers</h5>
+                        </div>
+                    </a>
+                </div>
+                <div class="col">
+                    <form
+                        name="logoutForm"
+                        action="/admin/logout"
+                        method="post"
+                    >
+                        <button class="card btn btn-danger" type="submit">
+                            <div class="card-body">
+                                <h5 class="card-title">Logout</h5>
+                            </div>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

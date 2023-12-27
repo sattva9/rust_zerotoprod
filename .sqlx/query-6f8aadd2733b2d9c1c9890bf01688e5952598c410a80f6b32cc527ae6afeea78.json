@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT newsletter_issue_id, subscriber_email, name as subscriber_name\n        FROM issue_delivery_queue as a INNER JOIN subscriptions as b\n        ON a.subscriber_email=b.email\n        FOR UPDATE\n        SKIP LOCKED\n        LIMIT 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "newsletter_issue_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "subscriber_email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "subscriber_name",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6f8aadd2733b2d9c1c9890bf01688e5952598c410a80f6b32cc527ae6afeea78"
+}

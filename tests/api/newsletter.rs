@@ -25,12 +25,12 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
             "idempotency_key": uuid::Uuid::new_v4().to_string(),
     });
     let response = app.post_publish_newsletter(&newsletter_request_body).await;
-    assert_is_redirect_to(&response, "/admin/newsletters");
+    assert_is_redirect_to(&response, "/admin/issues");
 
     let html_page = app.get_publish_newsletter_html().await;
-    assert!(html_page.contains(
-        "<p><i>The newsletter issue has been accepted - emails will go out shortly.</i></p>"
-    ));
+    assert!(
+        html_page.contains("The newsletter issue has been accepted - emails will go out shortly.")
+    );
     app.dispatch_all_pending_emails().await;
 }
 
@@ -94,12 +94,12 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
             "idempotency_key": uuid::Uuid::new_v4().to_string(),
     });
     let response = app.post_publish_newsletter(&newsletter_request_body).await;
-    assert_is_redirect_to(&response, "/admin/newsletters");
+    assert_is_redirect_to(&response, "/admin/issues");
 
     let html_page = app.get_publish_newsletter_html().await;
-    assert!(html_page.contains(
-        "<p><i>The newsletter issue has been accepted - emails will go out shortly.</i></p>"
-    ));
+    assert!(
+        html_page.contains("The newsletter issue has been accepted - emails will go out shortly.")
+    );
     app.dispatch_all_pending_emails().await;
 }
 
@@ -145,20 +145,20 @@ async fn newsletter_creation_is_idempotent() {
         "idempotency_key": uuid::Uuid::new_v4().to_string(),
     });
     let response = app.post_publish_newsletter(&newsletter_request_body).await;
-    assert_is_redirect_to(&response, "/admin/newsletters");
+    assert_is_redirect_to(&response, "/admin/issues");
 
     let html_page = app.get_publish_newsletter_html().await;
-    assert!(html_page.contains(
-        "<p><i>The newsletter issue has been accepted - emails will go out shortly.</i></p>"
-    ));
+    assert!(
+        html_page.contains("The newsletter issue has been accepted - emails will go out shortly.")
+    );
 
     let response = app.post_publish_newsletter(&newsletter_request_body).await;
-    assert_is_redirect_to(&response, "/admin/newsletters");
+    assert_is_redirect_to(&response, "/admin/issues");
 
     let html_page = app.get_publish_newsletter_html().await;
-    assert!(html_page.contains(
-        "<p><i>The newsletter issue has been accepted - emails will go out shortly.</i></p>"
-    ));
+    assert!(
+        html_page.contains("The newsletter issue has been accepted - emails will go out shortly.")
+    );
     app.dispatch_all_pending_emails().await;
 }
 

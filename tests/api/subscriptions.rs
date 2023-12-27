@@ -20,7 +20,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
         .await;
 
     let response = app.post_subscriptions(body.into()).await;
-    assert_eq!(200, response.status().as_u16());
+    assert_eq!(303, response.status().as_u16());
 }
 
 #[tokio::test]

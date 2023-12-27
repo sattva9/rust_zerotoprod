@@ -22,8 +22,7 @@ where
 pub fn read_flash_messages(flash_messages: &IncomingFlashes) -> String {
     let mut msg_html = String::new();
     for (_, m) in flash_messages.iter() {
-        let _ = writeln!(msg_html, "<p><i>{}</i></p>", m)
-            .with_context(|| "Failed to write flash messages");
+        let _ = writeln!(msg_html, "{}", m).with_context(|| "Failed to write flash messages");
     }
     msg_html
 }

@@ -64,7 +64,7 @@ pub async fn publish_newsletter(
         .context("Failed to enqueue delivery tasks")
         .map_err(e500)?;
 
-    let response = Redirect::to("/admin/newsletters").into_response();
+    let response = Redirect::to("/admin/issues").into_response();
     let response = save_response(transaction, &idempotency_key, user_id, response)
         .await
         .map_err(e500)?;

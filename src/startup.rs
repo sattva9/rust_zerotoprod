@@ -1,8 +1,9 @@
 use crate::authentication::reject_anonymous_users;
 use crate::configuration::{DatabaseSettings, RedisSettings, Settings};
 use crate::routes::{
-    admin_dashboard, change_password, change_password_form, confirm, health_check, home, log_out,
-    login, login_form, publish_newsletter, publish_newsletter_form, subscribe,
+    admin_dashboard, change_password, change_password_form, confirm, health_check, home, issue,
+    issues, log_out, login, login_form, publish_newsletter, publish_newsletter_form, subscribe,
+    subscribe_form, subscribers_list,
 };
 use crate::{AppState, HmacSecret};
 
@@ -139,17 +140,23 @@ pub fn run(
             "/newsletters",
             get(publish_newsletter_form).post(publish_newsletter),
         )
+        .route("/issues", get(issues))
+        .route("/issue/:id", get(issue))
+        .route("/subscribers", get(subscribers_list))
         .layer(middleware::from_fn_with_state(
             app_state.clone(),
             reject_anonymous_users,
         ));
 
+    let subscription_routes = Router::new()
+        .route("/", get(subscribe_form).post(subscribe))
+        .route("/confirm", get(confirm));
+
     let app = Router::new()
         .route("/health_check", get(health_check))
-        .route("/subscriptions", post(subscribe))
-        .route("/subscriptions/confirm", get(confirm))
         .route("/", get(home))
         .route("/login", get(login_form).post(login))
+        .nest("/subscriptions", subscription_routes)
         .nest("/admin", admin_routes)
         .with_state(app_state)
         .layer(service);
